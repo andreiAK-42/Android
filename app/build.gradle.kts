@@ -37,6 +37,7 @@ android {
 
 dependencies {
 
+    implementation("com.squareup.okhttp3:okhttp:3.10.0")
     implementation(libs.github.glide)
     implementation(libs.gson)
     implementation(libs.timber)
