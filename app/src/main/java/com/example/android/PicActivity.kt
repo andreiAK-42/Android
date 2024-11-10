@@ -2,6 +2,7 @@ package com.example.android
 
 import android.os.Bundle
 import android.util.Base64
+import android.widget.ImageView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -19,10 +20,11 @@ class PicActivity : AppCompatActivity() {
             insets
         }
 
+        val picLink = intent.getStringExtra("picLink")
 
-        val url: String = "https://i.pinimg.com/originals/a8/bf/f1/a8bff19fe2b4672ea84796d901fd4eea.jpg"
+        val picView: ImageView = findViewById(R.id.image)
         Glide.with(this)
-            .load(url)
-            .into(findViewById(R.id.image));
+            .load(picLink)
+            .into(picView)
     }
 }

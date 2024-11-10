@@ -19,10 +19,11 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val btnApp: Button = findViewById(R.id.button_with_image)
-
-        btnApp.setOnClickListener{
-            val intent =  Intent(this, PicActivity::class.java)
+        val btnShowPic: Button = findViewById(R.id.button_with_image)
+        btnShowPic.setOnClickListener {
+            val picLink = "https://i.pinimg.com/originals/a8/bf/f1/a8bff19fe2b4672ea84796d901fd4eea.jpg"
+            val intent = Intent(this, PicActivity::class.java)
+            intent.putExtra("picLink", picLink)
             startActivity(intent)
         }
 
