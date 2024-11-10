@@ -3,6 +3,7 @@ package com.example.android
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -58,13 +59,13 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 val recyclerView = findViewById<RecyclerView>(R.id.rView)
                 recyclerView.layoutManager = GridLayoutManager(this, 2)
-                recyclerView.adapter = FlickrAdapter(data.photos.photo, this)
+                recyclerView.adapter = FlickrAdapter(data.photos.photo)
             }
         }.start()
     }
 }
 
-class FlickrAdapter(private val photos: List<Photo>, private val context: Context) :
+class FlickrAdapter(private val photos: List<Photo>) :
     RecyclerView.Adapter<FlickrAdapter.ViewHolder>() {
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -81,15 +82,13 @@ class FlickrAdapter(private val photos: List<Photo>, private val context: Contex
         val photo = photos[position]
         val imageUrl = "https://farm${photo.farm}.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_q.jpg"
 
-        // Загрузка изображения с помощью Glide
-        Glide.with(context).load(imageUrl).into(holder.picture)
+        // Загрузка изображения с помощью Glide, используя контекст из itemView
+        Glide.with(holder.itemView).load(imageUrl).into(holder.picture)
 
         holder.itemView.setOnClickListener {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("imageUrl", imageUrl)
-            clipboard.setPrimaryClip(clip)
-
-            Log.i("RecyclerView", "Ссылка скопирована в буфер обмена: $imageUrl")
+            val intent = Intent(holder.itemView.context, PicViewer::class.java)
+            intent.putExtra("picLink", imageUrl)
+            holder.itemView.context.startActivity(intent)
         }
     }
 
@@ -100,52 +99,22 @@ class FlickrAdapter(private val photos: List<Photo>, private val context: Contex
 
 
 
-class Photo {
-    val id: String
-    val owner: String
-    val secret: String
-    val server: String
-    val farm: Int
-    val title: String
-    val ispublic: Int
-    val isfriend: Int
+data class Photo (
+    val id: String,
+    val owner: String,
+    val secret: String,
+    val server: String,
+    val farm: Int,
+    val title: String,
+    val ispublic: Int,
+    val isfriend: Int,
     val isfamily: Int
-
-    constructor(
-        id: String, owner: String, secret: String, server: String, farm: Int,
-        title: String, ispublic: Int, isfriend: Int, isfamily: Int
-    ) {
-        this.id = id
-        this.owner = owner
-        this.secret = secret
-        this.server = server
-        this.farm = farm
-        this.title = title
-        this.ispublic = ispublic
-        this.isfriend = isfriend
-        this.isfamily = isfamily
-    }
-
-}
-class PhotoPage {
-    val page: Int
-    val pages: Int
-    val perpage: Int
-    val total: Int
+)
+data class PhotoPage (
+    val page: Int,
+    val pages: Int,
+    val perpage: Int,
+    val total: Int,
     val photo: MutableList<Photo>
-
-    constructor(list: MutableList<Photo>, total: Int, perpage: Int, page: Int, pages: Int) {
-        this.page = page
-        this.pages = pages
-        this.perpage = perpage
-        this.total = total
-        this.photo = list
-    }
-}
-class Wrapper {
-    val photos: PhotoPage
-
-    constructor(pages: PhotoPage) {
-        this.photos = pages
-    }
-}
+)
+data class Wrapper (val photos: PhotoPage)

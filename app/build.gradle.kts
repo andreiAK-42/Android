@@ -36,7 +36,7 @@ android {
 }
 
 dependencies {
-
+    implementation(libs.androidx.appcompat.v161)
     implementation(libs.github.glide)
     implementation(libs.gson)
     implementation(libs.timber)
