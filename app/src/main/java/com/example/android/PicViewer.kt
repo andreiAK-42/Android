@@ -1,5 +1,7 @@
 package com.example.android
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -13,6 +15,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
 
 class PicViewer : AppCompatActivity() {
+    private var imageUrl: String? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -27,6 +30,17 @@ class PicViewer : AppCompatActivity() {
 
         val toolbar: androidx.appcompat.widget.Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
+
+        val optionsMenu = findViewById<ImageView>(R.id.fullImageView)
+        optionsMenu.setOnClickListener {
+            imageUrl = picLink;
+            val intent = Intent()
+            intent.putExtra("imageUrl", imageUrl)
+            intent.putExtra("isFavorite", true)
+            setResult(Activity.RESULT_OK, intent)
+            finish()
+        }
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -35,12 +49,12 @@ class PicViewer : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_favorite -> {
-                Toast.makeText(this, "Добавлено в Избранное", Toast.LENGTH_SHORT).show()
-                true
+        when (item.itemId) {
+            android.R.id.home -> {
+                finish()
+                return true
             }
-            else -> super.onOptionsItemSelected(item)
+            else -> return super.onOptionsItemSelected(item)
         }
     }
 }

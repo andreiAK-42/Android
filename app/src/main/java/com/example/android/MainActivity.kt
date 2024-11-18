@@ -1,9 +1,11 @@
 package com.example.android
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -12,11 +14,13 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
@@ -25,7 +29,9 @@ import java.io.InputStreamReader
 import java.net.URL
 
 
-class MainActivity : AppCompatActivity() {
+@Suppress("DEPRECATION")
+class MainActivity : AppCompatActivity(), OnItemClickListener {
+    private val PICK_IMAGE_REQUEST = 1
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -59,13 +65,43 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 val recyclerView = findViewById<RecyclerView>(R.id.rView)
                 recyclerView.layoutManager = GridLayoutManager(this, 2)
-                recyclerView.adapter = FlickrAdapter(data.photos.photo)
+                recyclerView.adapter = FlickrAdapter(data.photos.photo, this)
             }
         }.start()
     }
+
+
+    override fun onItemClick(imageUrl: String) {
+        val intent = Intent(this, PicViewer::class.java)
+        intent.putExtra("picLink", imageUrl)
+        startActivityForResult(intent, PICK_IMAGE_REQUEST)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == PICK_IMAGE_REQUEST) {
+            if (resultCode == Activity.RESULT_OK) {
+                data?.let {
+                    val imageUrl = it.getStringExtra("imageUrl")
+                    val isFavorite = it.getBooleanExtra("isFavorite", false)
+
+                    if (isFavorite && imageUrl != null) {
+                        val snackbar = Snackbar.make(findViewById(android.R.id.content), "Картинка добавлена в избранное", Snackbar.LENGTH_LONG)
+                        snackbar.setAction("Открыть") {
+                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(imageUrl))
+                            startActivity(browserIntent)
+                        }
+                        snackbar.show()
+                    }
+                }
+            }
+        }
+    }
+
 }
 
-class FlickrAdapter(private val photos: List<Photo>) :
+class FlickrAdapter(private val photos: List<Photo>, private val listener: OnItemClickListener) :
     RecyclerView.Adapter<FlickrAdapter.ViewHolder>() {
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -82,13 +118,11 @@ class FlickrAdapter(private val photos: List<Photo>) :
         val photo = photos[position]
         val imageUrl = "https://farm${photo.farm}.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_q.jpg"
 
-        // Загрузка изображения с помощью Glide, используя контекст из itemView
         Glide.with(holder.itemView).load(imageUrl).into(holder.picture)
+        val PICK_IMAGE_REQUEST: Int = 1
 
         holder.itemView.setOnClickListener {
-            val intent = Intent(holder.itemView.context, PicViewer::class.java)
-            intent.putExtra("picLink", imageUrl)
-            holder.itemView.context.startActivity(intent)
+            listener.onItemClick(imageUrl)
         }
     }
 
@@ -97,7 +131,9 @@ class FlickrAdapter(private val photos: List<Photo>) :
     }
 }
 
-
+interface OnItemClickListener {
+    fun onItemClick(imageUrl: String)
+}
 
 data class Photo (
     val id: String,
