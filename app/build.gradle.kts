@@ -36,7 +36,10 @@ android {
 }
 
 dependencies {
-
+    implementation(libs.androidx.appcompat.v161)
+    implementation(libs.github.glide)
+    implementation(libs.gson)
+    implementation(libs.timber)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
