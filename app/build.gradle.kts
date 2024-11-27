@@ -36,8 +36,9 @@ android {
 }
 
 dependencies {
-
-    implementation("com.squareup.okhttp3:okhttp:3.10.0")
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.okhttp)
+    implementation(libs.gson.v2101)
     implementation(libs.github.glide)
     implementation(libs.gson)
     implementation(libs.timber)
