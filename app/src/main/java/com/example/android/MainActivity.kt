@@ -2,6 +2,8 @@ package com.example.android
 
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -47,15 +49,16 @@ class MainActivity : AppCompatActivity() {
         Timber.plant(Timber.DebugTree())
 
         val etSearch: EditText = findViewById(R.id.et_search)
-        val btnSearch: Button = findViewById(R.id.btn_search)
 
         recyclerView = findViewById(R.id.rView)
 
-
-        btnSearch.setOnClickListener {
-            val query = etSearch.text.toString()
-            adapter.filterList(query)
-        }
+        etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                adapter.filterList(s.toString())
+            }
+        })
 
         CoroutineScope(Dispatchers.Main).launch {
             loadContacts()
