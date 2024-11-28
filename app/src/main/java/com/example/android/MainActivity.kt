@@ -7,7 +7,6 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
@@ -20,8 +19,6 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import okhttp3.Call
 import okhttp3.Callback
@@ -53,10 +50,13 @@ class MainActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.rView)
 
         etSearch.addTextChangedListener(object : TextWatcher {
+
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                adapter.filterList(s.toString())
+                if (::adapter.isInitialized && adapter != null) {
+                    adapter.filterList(s.toString())
+                }
             }
         })
 
@@ -118,19 +118,21 @@ class ContactAdapter(private var contacts: List<Contact>) : RecyclerView.Adapter
     }
 
     fun filterList(query: String) {
-        contacts = if (query.isEmpty()) {
-            originalContacts
-        } else {
-            originalContacts.filter { contact ->
-                contact.name.lowercase(Locale.getDefault())
-                    .contains(query.lowercase(Locale.getDefault())) ||
-                        contact.phone.lowercase(Locale.getDefault())
-                            .contains(query.lowercase(Locale.getDefault())) ||
-                        contact.type.lowercase(Locale.getDefault())
-                            .contains(query.lowercase(Locale.getDefault()))
+        if (!originalContacts.isNullOrEmpty()) {
+            contacts = if (query.isEmpty()) {
+                originalContacts
+            } else {
+                originalContacts.filter { contact ->
+                    contact.name.lowercase(Locale.getDefault())
+                        .contains(query.lowercase(Locale.getDefault())) ||
+                            contact.phone.lowercase(Locale.getDefault())
+                                .contains(query.lowercase(Locale.getDefault())) ||
+                            contact.type.lowercase(Locale.getDefault())
+                                .contains(query.lowercase(Locale.getDefault()))
+                }
             }
+            notifyDataSetChanged()
         }
-        notifyDataSetChanged()
     }
 
     override fun getItemCount(): Int = contacts.size
