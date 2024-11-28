@@ -1,6 +1,9 @@
 package com.example.android
 
 
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -8,6 +11,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.Manifest
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -30,9 +36,9 @@ import timber.log.Timber
 import java.util.Locale
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), OnItemClickListener  {
     private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: ContactAdapter
+    private var adapter: ContactAdapter? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -46,7 +52,6 @@ class MainActivity : AppCompatActivity() {
         Timber.plant(Timber.DebugTree())
 
         val etSearch: EditText = findViewById(R.id.et_search)
-
         recyclerView = findViewById(R.id.rView)
 
         etSearch.addTextChangedListener(object : TextWatcher {
@@ -54,9 +59,7 @@ class MainActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                if (::adapter.isInitialized && adapter != null) {
-                    adapter.filterList(s.toString())
-                }
+                adapter?.filterList(s.toString())
             }
         })
 
@@ -65,6 +68,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onItemClick(number: String?) {
+        val permissionCheck =
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf<String>(Manifest.permission.CALL_PHONE),
+                1
+            )
+        } else {
+            startActivity(Intent(Intent.ACTION_DIAL).setData(Uri.parse("tel:" + number)))
+        }
+
+    }
 
      suspend fun loadContacts() {
         val client = OkHttpClient()
@@ -84,8 +101,8 @@ class MainActivity : AppCompatActivity() {
                     val contacts = gson.fromJson<List<Contact>>(response.body!!.string(), type)
 
                     CoroutineScope(Dispatchers.Main).launch {
-                        adapter = ContactAdapter(contacts)
-                        adapter.originalContacts = contacts
+                        adapter = ContactAdapter(contacts, this@MainActivity)
+                        adapter!!.originalContacts = contacts
                         recyclerView.adapter = adapter
                         recyclerView.layoutManager = LinearLayoutManager(this@MainActivity)
                         Timber.d("Контакты загружены: ${contacts.size}")
@@ -98,7 +115,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 }
-class ContactAdapter(private var contacts: List<Contact>) : RecyclerView.Adapter<ContactAdapter.ViewHolder>() {
+class ContactAdapter(private var contacts: List<Contact>, private val listener: OnItemClickListener) : RecyclerView.Adapter<ContactAdapter.ViewHolder>() {
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val textName: TextView = itemView.findViewById(R.id.textName)
         val textPhone: TextView = itemView.findViewById(R.id.textPhone)
@@ -115,6 +132,10 @@ class ContactAdapter(private var contacts: List<Contact>) : RecyclerView.Adapter
         holder.textName.text = contact.name
         holder.textPhone.text = contact.phone
         holder.textType.text = contact.type
+
+        holder.itemView.setOnClickListener{
+            listener.onItemClick(contact.phone)
+        }
     }
 
     fun filterList(query: String) {
@@ -134,11 +155,13 @@ class ContactAdapter(private var contacts: List<Contact>) : RecyclerView.Adapter
             notifyDataSetChanged()
         }
     }
-
     override fun getItemCount(): Int = contacts.size
     public var originalContacts = contacts
 }
 
+interface OnItemClickListener {
+    fun onItemClick(number: String?)
+}
 
 data class Contact(
     val name: String,
