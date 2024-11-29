@@ -1,6 +1,5 @@
 package com.example.android
 
-
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -19,19 +18,18 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.Call
-import okhttp3.Callback
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
-import okio.IOException
 import timber.log.Timber
 import java.util.Locale
 
@@ -53,6 +51,9 @@ class MainActivity : AppCompatActivity(), OnItemClickListener  {
 
         val etSearch: EditText = findViewById(R.id.et_search)
         recyclerView = findViewById(R.id.rView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        adapter = ContactAdapter(this)
+        recyclerView.adapter = adapter
 
         etSearch.addTextChangedListener(object : TextWatcher {
 
@@ -63,8 +64,10 @@ class MainActivity : AppCompatActivity(), OnItemClickListener  {
             }
         })
 
-        CoroutineScope(Dispatchers.Main).launch {
-            loadContacts()
+        lifecycleScope.launch {
+            val contacts: List<Contact> = loadContacts()
+            adapter!!.submitList(contacts)
+            adapter!!.originalContacts = contacts
         }
     }
 
@@ -83,39 +86,32 @@ class MainActivity : AppCompatActivity(), OnItemClickListener  {
 
     }
 
-     suspend fun loadContacts() {
-        val client = OkHttpClient()
-        val request = Request.Builder()
-            .url("https://drive.google.com/u/0/uc?id=1-KO-9GA3NzSgIc1dkAsNm8Dqw0fuPxcR&export=download")
-            .build()
+    private suspend fun loadContacts(): List<Contact> {
+        return withContext(Dispatchers.IO) {
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url("https://drive.google.com/u/0/uc?id=1-KO-9GA3NzSgIc1dkAsNm8Dqw0fuPxcR&export=download")
+                .build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Timber.e(e, "Ошибка загрузки данных")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
+            try {
+                val response = client.newCall(request).execute()
                 if (response.isSuccessful) {
                     val gson = Gson()
                     val type = object : TypeToken<List<Contact>>() {}.type
-                    val contacts = gson.fromJson<List<Contact>>(response.body!!.string(), type)
-
-                    CoroutineScope(Dispatchers.Main).launch {
-                        adapter = ContactAdapter(contacts, this@MainActivity)
-                        adapter!!.originalContacts = contacts
-                        recyclerView.adapter = adapter
-                        recyclerView.layoutManager = LinearLayoutManager(this@MainActivity)
-                        Timber.d("Контакты загружены: ${contacts.size}")
-                    }
+                    gson.fromJson<List<Contact>>(response.body!!.string(), type)
                 } else {
-                    Timber.e("Ошибка загрузки данных: ${response.code}")
+                    emptyList()
                 }
+            } catch (e: Exception) {
+                Timber.e(e, "Ошибка загрузки контактов")
+                emptyList()
             }
-        })
+        }
     }
-
 }
-class ContactAdapter(private var contacts: List<Contact>, private val listener: OnItemClickListener) : RecyclerView.Adapter<ContactAdapter.ViewHolder>() {
+
+
+class ContactAdapter(private val listener: OnItemClickListener) : ListAdapter<Contact, ContactAdapter.ViewHolder>(ContactDiffCallback()) {
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val textName: TextView = itemView.findViewById(R.id.textName)
         val textPhone: TextView = itemView.findViewById(R.id.textPhone)
@@ -128,35 +124,37 @@ class ContactAdapter(private var contacts: List<Contact>, private val listener: 
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val contact = contacts[position]
+        val contact = getItem(position)
         holder.textName.text = contact.name
         holder.textPhone.text = contact.phone
         holder.textType.text = contact.type
-
-        holder.itemView.setOnClickListener{
-            listener.onItemClick(contact.phone)
-        }
+        holder.itemView.setOnClickListener { listener.onItemClick(contact.phone) }
     }
 
     fun filterList(query: String) {
-        if (!originalContacts.isNullOrEmpty()) {
-            contacts = if (query.isEmpty()) {
-                originalContacts
-            } else {
-                originalContacts.filter { contact ->
-                    contact.name.lowercase(Locale.getDefault())
-                        .contains(query.lowercase(Locale.getDefault())) ||
-                            contact.phone.lowercase(Locale.getDefault())
-                                .contains(query.lowercase(Locale.getDefault())) ||
-                            contact.type.lowercase(Locale.getDefault())
-                                .contains(query.lowercase(Locale.getDefault()))
-                }
+        val filteredList = if (query.isEmpty()) {
+            originalContacts
+        } else {
+            originalContacts.filter { contact ->
+                contact.name.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault())) ||
+                        contact.phone.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault())) ||
+                        contact.type.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
             }
-            notifyDataSetChanged()
         }
+        submitList(filteredList)
     }
-    override fun getItemCount(): Int = contacts.size
-    public var originalContacts = contacts
+
+    public var originalContacts: List<Contact> = emptyList()
+}
+
+class ContactDiffCallback : DiffUtil.ItemCallback<Contact>() {
+    override fun areItemsTheSame(oldItem: Contact, newItem: Contact): Boolean {
+        return oldItem.phone == newItem.phone
+    }
+
+    override fun areContentsTheSame(oldItem: Contact, newItem: Contact): Boolean {
+        return oldItem == newItem
+    }
 }
 
 interface OnItemClickListener {
