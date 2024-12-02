@@ -1,6 +1,8 @@
 package com.example.android
 
+import android.Manifest
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -10,12 +12,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.Manifest
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -37,15 +38,23 @@ import java.util.Locale
 class MainActivity : AppCompatActivity(), OnItemClickListener  {
     private lateinit var recyclerView: RecyclerView
     private var adapter: ContactAdapter? = null
+    private val PREFS_FILE = "Filter"
+    private val PREF_NAME = "FilterString"
+    var settings: SharedPreferences? = null
+    var prefEditor: SharedPreferences.Editor? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        settings = getSharedPreferences(PREFS_FILE, MODE_PRIVATE)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
+        getFilter()
 
         Timber.plant(Timber.DebugTree())
 
@@ -69,6 +78,20 @@ class MainActivity : AppCompatActivity(), OnItemClickListener  {
             adapter!!.submitList(contacts)
             adapter!!.originalContacts = contacts
         }
+    }
+    fun getFilter() {
+        val nameView = findViewById<TextView>(R.id.et_search)
+        val name: String? = settings!!.getString(PREF_NAME, "Абонент")
+        nameView.text = name
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        val name: String = findViewById<TextView>(R.id.et_search).getText().toString()
+        prefEditor = settings!!.edit()
+        prefEditor!!.putString(PREF_NAME, name)
+        prefEditor!!.apply()
     }
 
     override fun onItemClick(number: String?) {
@@ -143,7 +166,6 @@ class ContactAdapter(private val listener: OnItemClickListener) : ListAdapter<Co
         }
         submitList(filteredList)
     }
-
     public var originalContacts: List<Contact> = emptyList()
 }
 
