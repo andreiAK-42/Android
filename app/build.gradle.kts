@@ -36,7 +36,12 @@ android {
 }
 
 dependencies {
-
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.okhttp)
+    implementation(libs.gson.v2101)
+    implementation(libs.github.glide)
+    implementation(libs.gson)
+    implementation(libs.timber)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
